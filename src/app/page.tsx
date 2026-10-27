@@ -1,69 +1,104 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, CalendarDays, MapPin } from "lucide-react";
+import { HeroArt } from "@/components/HeroArt";
+import { Hours } from "@/components/Hours";
+import { GaragePhoto } from "@/components/GaragePhoto";
+import { QuickSearch } from "@/components/QuickSearch";
+import { VehicleCard } from "@/components/VehicleCard";
+import { JsonLd, autoDealerJsonLd } from "@/components/JsonLd";
+import { GARAGE, fullAddress, mapsUrl } from "@/config/garage";
+import { getPublicVehicles } from "@/lib/vehicles/service";
 
-export default function Home() {
+const uniq = (xs: (string | undefined)[]) => [...new Set(xs.filter((x): x is string => !!x))].sort((a, b) => a.localeCompare(b, "fr"));
+
+export default async function HomePage() {
+  const all = await getPublicVehicles();
+  const available = all.filter((v) => v.status !== "sold");
+  const latest = available.filter((v) => v.status === "available").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 3);
+  const deals = available.filter((v) => v.status === "available" && v.priceEur < 15000).sort((a, b) => a.priceEur - b.priceEur).slice(0, 3);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <JsonLd data={autoDealerJsonLd()} />
+      <section className="hero">
+        <div className="wrap">
+          <div>
+            <h1>Votre prochaine voiture vous attend chez <span className="hl">P2C&nbsp;Automobiles</span>.</h1>
+            <p className="lead">Des occasions préparées et garanties, et une équipe qui vous accompagne avant comme après l&apos;achat.</p>
+            <div className="ctas">
+              <Link className="btn btn-primary" href="/vehicules">Découvrir nos véhicules <ArrowRight aria-hidden /></Link>
+              <Link className="btn btn-secondary" href="#visite"><MapPin aria-hidden /> Nous rendre visite</Link>
+            </div>
+          </div>
+          <div className="art"><HeroArt /></div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      <div className="quick">
+        <div className="wrap">
+          <QuickSearch brands={uniq(available.map((v) => v.brand))} fuels={uniq(available.map((v) => v.fuel))} />
         </div>
-      </main>
-    </div>
+      </div>
+
+      <section>
+        <div className="wrap">
+          <div className="section-head">
+            <h2>Arrivées récentes</h2>
+            <Link className="link" href="/vehicules">Voir tous les véhicules <ArrowRight size={16} aria-hidden /></Link>
+          </div>
+          <div className="grid-cars">{latest.map((v, i) => <VehicleCard key={v.externalId} vehicle={v} priority={i === 0} />)}</div>
+        </div>
+      </section>
+
+      <section className="on-dark deals">
+        <div className="wrap">
+          <div className="section-head">
+            <div>
+              <span className="kicker">Notre spécialité</span>
+              <h2 style={{ marginTop: 8 }}>Les bonnes affaires à moins de 15&nbsp;000&nbsp;€</h2>
+            </div>
+            <Link className="btn btn-secondary" href="/vehicules?prix_max=15000">Voir la sélection</Link>
+          </div>
+          {deals.length ? (
+            <div className="grid-cars">{deals.map((v) => <VehicleCard key={v.externalId} vehicle={v} />)}</div>
+          ) : (
+            <div className="empty">
+              <h3>Rien à moins de 15 000 € cette semaine</h3>
+              <p>Dites-nous ce que vous cherchez, on vous prévient dès qu&apos;une voiture arrive.</p>
+              <Link className="btn btn-primary" href="/services#recherche">Demander une recherche</Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <div className="call-band">
+        <div className="wrap">
+          <div>
+            <h2>Une question ? Appelez {GARAGE.contactName}.</h2>
+            <p>Une voiture vous plaît, vous cherchez un modèle précis ou vous voulez faire reprendre la vôtre : on en parle de vive voix.</p>
+          </div>
+          <a className="phone-big" href={`tel:${GARAGE.phoneTel}`}>{GARAGE.phone}</a>
+        </div>
+      </div>
+
+      <section id="visite">
+        <div className="wrap">
+          <div className="visit">
+            <div className="info">
+              <h2>Votre prochain véhicule est peut-être déjà chez nous.</h2>
+              <dl>
+                <dt>Adresse</dt><dd>{fullAddress}</dd>
+                <dt>Horaires</dt><dd><Hours /></dd>
+              </dl>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <Link className="btn btn-primary" href="/contact"><CalendarDays aria-hidden /> Prendre rendez-vous</Link>
+                <a className="btn btn-secondary" href={mapsUrl} target="_blank" rel="noopener noreferrer"><MapPin aria-hidden /> Itinéraire</a>
+              </div>
+            </div>
+            <div className="ph"><GaragePhoto sizes="(max-width: 860px) 100vw, 600px" /></div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }
